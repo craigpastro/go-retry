@@ -66,6 +66,38 @@ func ExampleWithJitter() {
 	}
 }
 
+func TestWithFullJitter(t *testing.T) {
+	t.Parallel()
+
+	for i := 0; i < 100_000; i++ {
+		b := retry.WithFullJitter(retry.BackoffFunc(func() (time.Duration, bool) {
+			return 1 * time.Second, false
+		}))
+		val, stop := b.Next()
+		if stop {
+			t.Errorf("should not stop")
+		}
+
+		if min, max := 0*time.Millisecond, 1250*time.Millisecond; val < min || val > max {
+			t.Errorf("expected %v to be between %v and %v", val, min, max)
+		}
+	}
+}
+
+func ExampleWithFullJitter() {
+	ctx := context.Background()
+
+	b := retry.NewFibonacci(1 * time.Second)
+	b = retry.WithFullJitter(b)
+
+	if err := retry.Do(ctx, b, func(_ context.Context) error {
+		// TODO: logic here
+		return nil
+	}); err != nil {
+		// handle error
+	}
+}
+
 func TestWithJitterPercent(t *testing.T) {
 	t.Parallel()
 

@@ -43,6 +43,22 @@ func WithJitter(j time.Duration, next Backoff) Backoff {
 	})
 }
 
+// WithFullJitter wraps a backoff function will full jitter. That is, the
+// next value could be any value between 0 and Next(). The value can never be
+// less than 0 or greater than Next().
+func WithFullJitter(next Backoff) Backoff {
+	r := newLockedRandom(time.Now().UnixNano())
+
+	return BackoffFunc(func() (time.Duration, bool) {
+		val, stop := next.Next()
+		if stop {
+			return 0, true
+		}
+
+		return time.Duration(r.Int63n(int64(val) + 1)), false
+	})
+}
+
 // WithJitterPercent wraps a backoff function and adds the specified jitter
 // percentage. j can be interpreted as "+/- j%". For example, if j were 5 and
 // the backoff returned 20s, the value could be between 19 and 21 seconds. The
